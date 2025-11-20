@@ -36,7 +36,7 @@ struct ContentView: View {
 
             SupportTabView()
                 .tabItem {
-                    Label("Support", systemImage: "lifepreserver")
+                    Label("Support", systemImage: "ellipsis.bubble")
                 }
         }
     }
