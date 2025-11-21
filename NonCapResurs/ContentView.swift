@@ -107,20 +107,38 @@ private struct EngagementsTabView: View {
         NavigationStack {
             List {
                 // "Cards" section with a horizontal carousel of credit cards
-                Section("Cards") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
+                Section {
+                    if #available(iOS 17.0, *) {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 16) {
+                                ForEach(sampleCards) { card in
+                                    CreditCardView(card: card)
+                                }
+                            }
+                            .scrollTargetLayout() // mark children as scroll targets for snapping
+                        }
+                        .contentMargins(.horizontal, 0, for: .scrollContent) // keep carousel position
+                        .scrollTargetBehavior(.viewAligned) // snap each card to center
+                        .scrollIndicators(.hidden)
+                    } else {
+                        // iOS 16 fallback: page-style TabView (snaps per page)
+                        TabView {
                             ForEach(sampleCards) { card in
                                 CreditCardView(card: card)
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
+                        .frame(height: 190)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .padding(.horizontal, 16) // keep carousel position
                     }
-                    .listRowInsets(EdgeInsets()) // let the carousel span the full row width
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                } header: {
+                    Text("Cards")
+                        .padding(.leading, 16) // shift title 16pt to the right
                 }
+                // Remove row insets so our own margins control the content
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
                 // Engagements now represent banking accounts
                 Section("Engagements") {
@@ -411,7 +429,7 @@ private struct AccountItem: Identifiable {
 private let accounts: [AccountItem] = [
     .init(icon: "creditcard", name: "Resurs Gold"),
     .init(icon: "creditcard", name: "Resurs Family"),
-    .init(icon: "creditcard", name: "Gekås MC"),
+    .init(icon: "Gekås MC", name: "Gekås MC"),
     .init(icon: "building.columns", name: "Loan"),
     .init(icon: "chart.line.uptrend.xyaxis", name: "Savings"),
     .init(icon: "divide.circle", name: "Part Payment"),
