@@ -103,6 +103,29 @@ private struct WalletTabView: View {
 }
 
 private struct EngagementsTabView: View {
+
+    // Caption to show beneath the trailing amount per engagement.
+    // Custom overrides per account name as requested.
+    private func amountCaption(for item: AccountItem) -> String {
+        switch item.name {
+        case "Netonnet":
+            return "not billed"
+        case "Bauhaus":
+            return "not billed"
+        case "Power", "Jula":
+            return "paid"
+        default:
+            // Fallback to type-based captions
+            switch item.type {
+            case .loan: return "debt"
+            case .saving: return "balance"
+            case .buyNowPayLater: return "debt"
+            case .storeCredit: return "available"
+            case .universalCredit, .universalHybrid: return ""
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -132,7 +155,7 @@ private struct EngagementsTabView: View {
                         .padding(.horizontal, 16) // keep carousel position
                     }
                 } header: {
-                    Text("Cards")
+                    Text("Universal Credit")
                         .padding(.leading, 16) // shift title 16pt to the right
                 }
                 // Remove row insets so our own margins control the content
@@ -140,14 +163,65 @@ private struct EngagementsTabView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-                // Engagements now represent banking accounts
-                Section("Engagements") {
-                    ForEach(accounts) { item in
-                        HStack {
+                // Store Credit section (exclude Universal types, Savings and Loan)
+                Section("Store Credit") {
+                    ForEach(accounts.filter { ($0.type != .universalCredit && $0.type != .universalHybrid) && ($0.type != .saving && $0.type != .loan) }) { item in
+                        let caption = amountCaption(for: item)
+                        HStack(spacing: 12) {
                             Image(systemName: item.icon)
                                 .foregroundStyle(.tint)
-                            Text(item.name)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                Text(item.type.rawValue)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
                             Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(item.balance, format: sekNoFraction)
+                                    .font(.callout)
+                                    .foregroundStyle(item.type == .saving ? .green : .primary)
+                                Text(caption)
+                                    .font(.caption2)
+                                    .foregroundStyle(caption == "paid" ? .green : .secondary)
+                            }
+
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.tertiary)
+                        }
+                        .listRowBackground(Rectangle().fill(.ultraThinMaterial))
+                    }
+                }
+
+                // Finance section (Savings and Loan)
+                Section("Finance") {
+                    ForEach(accounts.filter { $0.type == .saving || $0.type == .loan }) { item in
+                        let caption = amountCaption(for: item)
+                        HStack(spacing: 12) {
+                            Image(systemName: item.icon)
+                                .foregroundStyle(.tint)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                Text(item.type.rawValue)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(item.balance, format: sekNoFraction)
+                                    .font(.callout)
+                                    .foregroundStyle(item.type == .saving ? .green : .primary)
+                                Text(caption)
+                                    .font(.caption2)
+                                    .foregroundStyle(caption == "paid" ? .green : .secondary)
+                            }
+
                             Image(systemName: "chevron.right")
                                 .foregroundStyle(.tertiary)
                         }
@@ -420,20 +494,33 @@ private struct WalletSummaryCard: View {
 
 // MARK: - Accounts list data (Engagements)
 
+private enum EngagementType: String {
+    case storeCredit       = "Store credit"
+    case universalCredit   = "Universal credit"
+    case buyNowPayLater    = "Buy now pay later"
+    case loan              = "Loan"
+    case saving            = "Savings"
+    case universalHybrid   = "Universal hybrid"
+}
+
 private struct AccountItem: Identifiable {
     let id = UUID()
     let icon: String
     let name: String
+    let type: EngagementType
+    let balance: Double
 }
 
 private let accounts: [AccountItem] = [
-    .init(icon: "creditcard", name: "Resurs Gold"),
-    .init(icon: "creditcard", name: "Resurs Family"),
-    .init(icon: "Gekås MC", name: "Gekås MC"),
-    .init(icon: "building.columns", name: "Loan"),
-    .init(icon: "chart.line.uptrend.xyaxis", name: "Savings"),
-    .init(icon: "divide.circle", name: "Part Payment"),
-    .init(icon: "bag", name: "Store Account")
+    .init(icon: "creditcard",        name: "Resurs Gold",      type: .universalCredit, balance: 12450),
+    .init(icon: "creditcard",        name: "Resurs Family",    type: .universalHybrid, balance: 9300),
+    .init(icon: "creditcard",        name: "Gekås MC",         type: .universalCredit, balance: 6700),
+    .init(icon: "building.columns",  name: "Garden Upgrade",   type: .loan,            balance: 125000),
+    .init(icon: "chart.line.uptrend.xyaxis", name: "New Car",  type: .saving,          balance: 45230),
+    .init(icon: "divide.circle",     name: "Netonnet",         type: .buyNowPayLater,  balance: 3200),
+    .init(icon: "bag",               name: "Bauhaus",          type: .storeCredit,     balance: 1250),
+    .init(icon: "bag",               name: "Power",            type: .storeCredit,     balance: 2200),
+    .init(icon: "bag",               name: "Jula",             type: .storeCredit,     balance: 5400)
 ]
 
 // MARK: - Invoices data and rows
